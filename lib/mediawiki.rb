@@ -6,11 +6,9 @@ require 'nokogiri'
 require 'open-uri'
 
 module Mediawiki
-  VERSION = '0.0.1'
+  VERSION = '0.0.2'
   
   def self.search_for_html(wiki_host, term)
-    document = Nokogiri::HTML(open("http://#{wiki_host}/wiki/Special:Search?search=#{term}"))
-    
-    return document.search('#bodyContent').first.to_s
+    open("http://#{wiki_host}/wiki/Special:Search?search=#{term}")
   end
 end
