@@ -1,21 +1,53 @@
 $:.unshift(File.dirname(__FILE__)) unless
-  $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
+$:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
 
 require 'rubygems'
-#require 'nokogiri'
-require 'open-uri'
+require 'rest_client'
+require 'cgi'
 
 module Mediawiki
-  VERSION = '0.0.3'
-  
+  VERSION = '0.0.4'
+
   def self.search_for_html(wiki_host, term)
-    open("http://#{wiki_host}/wiki/Special:Search?search=#{URI.encode(term)}").read
+    RestClient.get "#{wiki_host}/wiki/Special:Search?search=#{URI.encode(term)}" 
   end
 
   def self.last_modified(wiki_host, page)
     # can't seem to find evidence that the query will ever return
     # more than one page. Conveniently returns nil on pages that
     # do not exist/throw errors.
-    YAML.load(open("http://#{wiki_host}/w/api.php?action=query&titles=#{URI.encode(page)}&format=yaml&prop=info").read)["query"]["pages"][0]["lastrevid"]
+    YAML.load(RestClient.get apify wiki_host, "query", "titles=#{URI.encode(page)}", "prop=info")["query"]["pages"][0]["lastrevid"]
+  end
+
+  def self.login(wiki_host, user, password)
+    result = YAML.load RestClient.post apify(wiki_host, "login"), :lgname => user, :lgpassword => password
+
+    return nil unless result["login"]["result"] == "Success"
+    result = result["login"]
+    prefix = result["cookieprefix"]
+
+    # http://www.mediawiki.org/wiki/API:Login
+    # And, lo, I pronounce thee
+    "#{prefix}UserName=#{result["lgusername"]}; " +
+    "#{prefix}UserId=#{result["lguserid"].strip}; " +
+    "#{prefix}Token=#{result["lgtoken"]}; "+
+    "#{prefix}_session=#{result["sessionid"]}"
+  end
+
+  def self.edit(wiki_host, title, text, summary, cookie)
+    token = YAML.load(RestClient.get apify(wiki_host, "query", "prop=info%7Crevisions", "intoken=edit", "titles=User:Hif/foo"), :Cookie => cookie)["query"]["pages"][0]["edittoken"]
+
+    e_token, e_title, e_text, e_summary = CGI::escape(token), CGI::escape(title), CGI::escape(text), CGI::escape(summary)
+
+    r = RestClient::Resource.new apify(wiki_host, "edit", "title=#{e_title}", "text=#{e_text}", "token=#{e_token}")
+
+    # basically, the only way for this to fail is if you have a wrong cookie
+    return nil unless (result = r.post "", :Cookie => cookie).include? "Success"
+    result
+  end
+
+  private
+  def self.apify(wiki_host, action, *opts)
+    "#{wiki_host}/w/api.php?action=#{action}&format=yaml" + opts.collect { |i| "&" + i }.to_s
   end
 end

@@ -1,2 +1,2 @@
-* Use the official Mediawiki API
-* Add edit abilities
+* Expand to the rest of the API
+* Move away from return-nil brittle prototyping; recognise error codes, exceptions?
