@@ -48,7 +48,7 @@ module Mediawiki
     server_response = resource.post("", :Cookie => cookie)
   
     # basically, the only way for this to fail is if you have a wrong cookie
-    return nil unless(server_response.include? "Success"
+    return nil unless server_response.include?("Success")
     result
   end
 
