@@ -13,7 +13,7 @@ module Mediawiki
   end
   
   def self.article_properties(wiki_host, page)
-    YAML.load(RestClient.get api_url wiki_host, "query", "titles=#{URI.encode(page)}", "prop=info")
+    YAML.load(RestClient.get api_url(wiki_host, "query", "titles=#{URI.encode(page)}", "prop=info"))
   end
 
   def self.last_modified(wiki_host, page)
