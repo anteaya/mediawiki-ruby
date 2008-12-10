@@ -4,6 +4,7 @@ $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname
 require 'rubygems'
 require 'rest_client'
 require 'cgi'
+require 'yaml'
 
 module Mediawiki
   VERSION = '0.0.4'
