@@ -50,7 +50,7 @@ module Mediawiki
   
     # basically, the only way for this to fail is if you have a wrong cookie
     return nil unless server_response.include?("Success")
-    result
+    server_response
   end
 
  private
