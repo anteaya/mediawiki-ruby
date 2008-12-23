@@ -39,18 +39,33 @@ module Mediawiki
       "#{prefix}_session=#{result["sessionid"]}"
   end
 
+  # currently, #edit & #markup are less than awesome: these will 
+  # fail silently if the title you're looking up has any redirects, 
+  # and they will not warn you about disambiguations. Ideally,
+  # (aka later on), these methods will only take pageids after a 
+  # lookup and/or disambiguation is performed
+
   def self.edit(wiki_host, title, text, summary, cookie)
-    token = YAML.load(RestClient.get api_url(wiki_host, "query", "prop=info%7Crevisions", "intoken=edit", "titles=User:Hif/foo"), :Cookie => cookie)["query"]["pages"][0]["edittoken"]
+    e_title = URI::escape(title)
 
-    e_token, e_title, e_text, e_summary = CGI::escape(token), CGI::escape(title), CGI::escape(text), CGI::escape(summary)
+    token = YAML.load(RestClient.get api_url(wiki_host, "query", "prop=info%7Crevisions", "intoken=edit", "titles=#{e_title}"), :Cookie => cookie)["query"]["pages"][0]["edittoken"]
 
-    resource = RestClient::Resource.new(api_url(wiki_host, "edit", "title=#{e_title}", "text=#{e_text}", "token=#{e_token}"))
+    e_token, e_text, e_summary = CGI::escape(token), CGI::escape(text), CGI::escape(summary)
 
-    server_response = resource.post("", :Cookie => cookie)
+    server_response = RestClient.post(api_url(wiki_host, "edit", "title=#{e_title}", "text=#{e_text}", "token=#{e_token}"), "", :Cookie => cookie)
   
     # basically, the only way for this to fail is if you have a wrong cookie
     return nil unless server_response.include?("Success")
     server_response
+  end
+
+  # http://www.mediawiki.org/wiki/API:Query_-_Properties#revisions_.2F_rv
+  def self.markup(wiki_host, title)
+    response = YAML.load(RestClient.get(api_url(wiki_host, "query", "prop=revisions", "titles=#{URI::escape(title)}", "rvprop=content")))
+    
+    # we only request one page, and only one revision
+    # returns nil on errors
+    response["query"]["pages"][0]["revisions"][0]['*']
   end
 
  private
